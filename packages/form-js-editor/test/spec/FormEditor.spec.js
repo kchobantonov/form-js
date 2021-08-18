@@ -38,9 +38,9 @@ describe('FormEditor', function() {
     document.body.appendChild(container);
   });
 
-  !singleStart && afterEach(function() {
-    document.body.removeChild(container);
-  });
+  // !singleStart && afterEach(function() {
+  //   document.body.removeChild(container);
+  // });
 
   (singleStart ? it.only : it)('should render', async function() {
 
@@ -643,6 +643,43 @@ describe('FormEditor', function() {
       expect(dragulaDestroyedSpy).to.have.been.calledOnce;
     });
 
+
+    it('should create and select new form field', async function() {
+
+      // given
+      const formEditor = await createFormEditor({
+        schema,
+        container
+      });
+
+      await expectDragulaCreated(formEditor);
+
+      // assume
+      const formFieldRegistry = formEditor.get('formFieldRegistry');
+
+      expect(formFieldRegistry.getAll()).to.have.length(11);
+
+      // when
+      const formField = container.querySelector('.fjs-palette-field[data-field-type="textfield"]');
+
+      const form = container.querySelector('.fjs-drag-container[data-id="Form_1"]');
+
+      const bounds = form.getBoundingClientRect();
+
+      dispatchEvent(formField, 'mousedown', { which: 1 });
+
+      dispatchEvent(form, 'mousemove', { clientX: bounds.x, clientY: bounds.y });
+
+      dispatchEvent(form, 'mouseup');
+
+      // then
+      expect(formFieldRegistry.getAll()).to.have.length(12);
+
+      const selection = formEditor.get('selection');
+
+      expect(selection.get()).to.include({ type: 'textfield' });
+    });
+
   });
 
 });
@@ -670,4 +707,26 @@ async function expectSelected(expectedId) {
 
     expect(selectedId).to.equal(expectedId);
   });
+}
+
+async function expectDragulaCreated(formEditor) {
+  let dragulaCreated;
+
+  formEditor.on('dragula.created', () => {
+    dragulaCreated = true;
+  });
+
+  await waitFor(() => {
+    expect(dragulaCreated).to.be.true;
+  });
+}
+
+function dispatchEvent(element, type, options = {}) {
+  const event = document.createEvent('Event');
+
+  event.initEvent(type, true, true);
+
+  Object.keys(options).forEach(key => event[ key ] = options[ key ]);
+
+  element.dispatchEvent(event);
 }
